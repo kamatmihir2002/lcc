@@ -40,9 +40,23 @@ void RValueExpression7(char** stream, symbol_table_t** local_symtab, symbol_tabl
         int sname_len = get_token_length();
         memcpy(sname, get_token(), sizeof(char) * (get_token_length() + 1));
         sname[get_token_length()] = 0;
+
         // fncall
         if (peek_token(stream) == '(') {
             next_token(stream);
+
+            symbol_table_t* sym = symtab_find_sym(*global_symtab, sname, sname_len);
+            
+            if (!sym) {
+                printf("Function not found.\n");
+                exit(1);
+            }
+            else {
+                if (!sym->sym_is_func) {
+                    printf("Calling a non callable symbol.\n");
+                    exit(1);
+                }
+            }
 
             int param_stack[32];
             int p_stack_len = 0;
@@ -108,6 +122,15 @@ void RValueExpression7(char** stream, symbol_table_t** local_symtab, symbol_tabl
         }
         else {
             // normal variable
+            symbol_table_t* sym = symtab_find_sym(*local_symtab, sname, sname_len);
+            if (!sym){
+                sym = symtab_find_sym(*global_symtab, sname, sname_len);
+            }
+
+            if (!sym) {
+                printf("Symbol not found.\n");
+                exit(1);
+            }
             printf("$%d = %s\n", save_reg, sname);
             reg_stack = save_reg;
         }
@@ -394,7 +417,16 @@ void LValueExpression7(char** stream, symbol_table_t** local_symtab, symbol_tabl
         else {
             // normal variable
             // printf("$%d = %s\n", save_reg, sname);
+            symbol_table_t* sym = symtab_find_sym(*local_symtab, sname, sname_len);
+            if (!sym){
+                sym = symtab_find_sym(*global_symtab, sname, sname_len);
+            }
 
+            if (!sym) {
+                printf("Symbol not found.\n");
+                exit(1);
+            }
+            
             snprintf(lval_result, sizeof(char) * 32, "%s", sname);
             reg_stack = save_reg;
         }

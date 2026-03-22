@@ -3,6 +3,8 @@
 typedef struct symbol_table {
     struct symbol_table* next;
     int symtype;
+    char sym_is_func;
+    char sym_func_has_def;
     char sym_ptrlevel;
     char sym_lenarray;
     int symlen;

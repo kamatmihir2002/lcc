@@ -14,6 +14,8 @@ symbol_table_t* push_sym(symbol_table_t* symtab, int symtype, char* symname, int
         s->sym_lenarray = sym_lenarray;
         s->symlen = symlen;
         s->symtype = symtype;
+        s->sym_is_func = 0;
+        s->sym_func_has_def = 0;
         return s;
     }
     else {
@@ -23,6 +25,9 @@ symbol_table_t* push_sym(symbol_table_t* symtab, int symtype, char* symname, int
                 return NULL;
             }
             st = st->next;
+        }
+        if (strcmp(st->symname, symname) == 0) {
+            return NULL;
         }
         st->next = push_sym(NULL, symtype, symname, symlen, sym_ptrlevel, sym_lenarray);
         return symtab;
@@ -46,16 +51,21 @@ symbol_table_t* symtab_push_array_ptr(symbol_table_t* symtab, int symtype, char*
     return push_sym(symtab, symtype, symname, symlen, ptrlevel, arr_len);
 }
 
+#include <stdio.h>
 
 symbol_table_t* symtab_find_sym(symbol_table_t* symtab, char* symname, int symlen) {
     symbol_table_t* st = symtab;
+    if (!st)
+        return NULL;
     while (st->next) {
-        if (strcmp(st->symname, symname) == 0)
+        if (strcmp(st->symname, symname) == 0) {
             return st;
+        }
         st = st->next;
     }
-    if (strcmp(st->symname, symname) == 0)
+    if (strcmp(st->symname, symname) == 0) {
         return st;
+    }
     return NULL;
 }
 

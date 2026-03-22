@@ -58,8 +58,12 @@ void Declaration(char** stream, symbol_table_t** symtab) {
     char* symname = NULL;
     int symlen = 0, arrlen = 0;
     SymArray(stream, &symname, &symlen, &arrlen);
-    (*symtab) = symtab_push_array_ptr((*symtab), type, symname, symlen, ptr_level, arrlen);
-    if (!(*symtab)) {
-        /** error */
+
+    symbol_table_t* sym = symtab_find_sym((*symtab), symname, symlen);
+    if (sym) {
+        printf("Symbol exists.\n");
+        exit(1);
     }
+    (*symtab) = symtab_push_array_ptr((*symtab), type, symname, symlen, ptr_level, arrlen);
+    
 }

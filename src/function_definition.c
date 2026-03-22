@@ -2,6 +2,7 @@
 #include "fwd_declarations.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 
 int getSize(int tk_type) {
     switch(tk_type) {
@@ -28,6 +29,8 @@ long long getType(int tk_type) {
 
 void FunctionDefinition(char** stream, symbol_table_t** local_symtab, symbol_table_t** global_symtab) {
     char* save = *stream;
+
+    symbol_table_t* gt = *global_symtab;
     FunctionDeclaration(stream, local_symtab, global_symtab);
     
     if (*stream == save) {
@@ -35,10 +38,11 @@ void FunctionDefinition(char** stream, symbol_table_t** local_symtab, symbol_tab
         return;
     }
 
-    symbol_table_t* fun_symbol = symtab_tail(*global_symtab);
+    symbol_table_t* fun_symbol = *global_symtab;
     long long retType = getType(fun_symbol->symtype);
 
     printf("function_name %s return %s ptr_level %d\n", fun_symbol->symname, (char*)(&retType), fun_symbol->sym_ptrlevel);
+    
     symbol_table_t* params = *local_symtab;
     if (params) {
         while (params->next) {
@@ -49,9 +53,20 @@ void FunctionDefinition(char** stream, symbol_table_t** local_symtab, symbol_tab
     }
     
     if (peek_token(stream) != ';') {
+        if (fun_symbol->sym_func_has_def) {
+            printf("Function already defined.\n");
+            exit(1);
+        }
+        fun_symbol->sym_func_has_def = 1;
+        if (gt)
+            *global_symtab = gt;
         StatementBlock(stream, local_symtab, global_symtab);
     }
     else {
+        fun_symbol->sym_is_func = 1;
+        fun_symbol->sym_func_has_def = 0;
+        if(gt)
+            *global_symtab = gt;
         next_token(stream);
     }
 }
