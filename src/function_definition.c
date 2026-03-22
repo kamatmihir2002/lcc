@@ -40,9 +40,11 @@ void FunctionDefinition(char** stream, symbol_table_t** local_symtab, symbol_tab
 
     printf("function_name %s return %s ptr_level %d\n", fun_symbol->symname, (char*)(&retType), fun_symbol->sym_ptrlevel);
     symbol_table_t* params = *local_symtab;
-    while (params->next) {
-        printf("param %s size %d pointer_level %d array_length %d\n", params->symname, getSize(params->symtype), params->sym_ptrlevel, params->sym_lenarray);
-        params = params->next;
+    if (params) {
+        while (params->next) {
+            printf("param %s size %d pointer_level %d array_length %d\n", params->symname, getSize(params->symtype), params->sym_ptrlevel, params->sym_lenarray);
+            params = params->next;
+        }
     }
     
     printf("param %s size %d pointer_level %d array_length %d\n", params->symname, getSize(params->symtype), params->sym_ptrlevel, params->sym_lenarray);

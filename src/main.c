@@ -27,5 +27,6 @@ int main(int argc, char** argv) {
     else if (argc == 2) {
         s = argv[1];
     }
+    
     Program(&s, &gt);
 }
