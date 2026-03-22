@@ -5,7 +5,7 @@ SRCS := $(wildcard src/*.c)
 
 OBJS := $(patsubst %.c,%.o,$(SRCS))
 
-TARGET = bin/ucc
+TARGET = bin/lcc
 
 
 .PHONY: all clean
