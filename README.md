@@ -1,6 +1,6 @@
 # lcc
 
-This is a recovered copy of the source code of a C compiler I was working on previously. Outputs single pass SSA code with additional bookkeeping for function declarations.
+This is a recovered copy of the source code of a C-subset compiler I worked on a couple years ago, cleaned up and tidied a bit. Outputs single pass SSA code with additional bookkeeping for function declarations.
 
 I had completed it before, but the final copy outputted pretty bad NASM code, with some very basic optimizations like dead code elimination for if-conditionals with pure constant statements. 
 
