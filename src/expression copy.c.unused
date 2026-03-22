@@ -1,0 +1,395 @@
+#include "fwd_declarations.h"
+#include "lex.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+/**
+ * RValue precedence:
+ *
+ */
+
+char reg_stack_vars[32][32];
+int reg_stack = 0;
+char lval_result[32];
+
+static void copy_token_string(char* dst, int dst_size) {
+    int len = get_token_length();
+    if (len >= dst_size) {
+        len = dst_size - 1;
+    }
+    memcpy(dst, get_token(), sizeof(char) * len);
+    dst[len] = 0;
+}
+
+static int IsLValueStart(char** stream) {
+    return peek_token(stream) == TOKEN_IDENTIFIER || peek_token(stream) == '*';
+}
+
+static void LValuePrimary(char** stream, symbol_table_t** local_symtab, symbol_table_t** global_symtab);
+
+//IDENT, NUMBER, FNCALL, PAREN
+void RValueExpression7(char** stream, symbol_table_t** local_symtab, symbol_table_t** global_symtab) {
+    int save_reg = reg_stack;
+
+    int tk = peek_token(stream);
+    if (tk == '(') {
+        next_token(stream);
+        reg_stack++;
+        RValueExpression(stream, local_symtab, global_symtab);
+        int rg_paren = reg_stack;
+
+        if (peek_token(stream) == ')') {
+            next_token(stream);
+            printf("$%d = $%d\n", save_reg, rg_paren);
+            reg_stack = save_reg;
+            return;
+        }
+        else {
+            /** ERROR */
+        }
+    }
+    else if (tk == TOKEN_IDENTIFIER) {
+        next_token(stream);
+        char* sname = malloc(sizeof(char) * (get_token_length() + 1));
+        copy_token_string(sname, get_token_length() + 1);
+
+        if (peek_token(stream) == '(') {
+            next_token(stream);
+
+            int param_stack[32];
+            int p_stack_len = 0;
+
+            while (peek_token(stream) != ')') {
+                reg_stack++;
+                RValueExpression(stream, local_symtab, global_symtab);
+                int rg_param = reg_stack;
+
+                param_stack[p_stack_len] = rg_param;
+                p_stack_len++;
+
+                if (peek_token(stream) == ',')
+                    next_token(stream);
+                if (peek_token(stream) == TOKEN_END) {
+                    /** ERROR */
+                }
+                if (peek_token(stream) == ')') {
+                    next_token(stream);
+                    break;
+                }
+            }
+
+            for (int i = 0; i < p_stack_len; i++) {
+                printf("param $%d\n", param_stack[i]);
+            }
+
+            printf("call %s\n", sname);
+            printf("$%d = call_result\n", save_reg);
+            reg_stack = save_reg;
+        }
+        else if (peek_token(stream) == '[') {
+            next_token(stream);
+            reg_stack++;
+            RValueExpression(stream, local_symtab, global_symtab);
+            int rg_index = reg_stack;
+            if (peek_token(stream) == ']') {
+                next_token(stream);
+                printf("$%d = %s[$%d]\n", save_reg, sname, rg_index);
+                reg_stack = save_reg;
+                free(sname);
+                return;
+            }
+            else {
+                /** ERROR */
+            }
+        }
+        else {
+            printf("$%d = %s\n", save_reg, sname);
+            reg_stack = save_reg;
+        }
+
+        free(sname);
+        reg_stack = save_reg;
+    }
+    else if (tk == TOKEN_NUMBER) {
+        next_token(stream);
+        char* snum = malloc(sizeof(char) * (get_token_length() + 1));
+        copy_token_string(snum, get_token_length() + 1);
+
+        printf("$%d = %s\n", save_reg, snum);
+        reg_stack = save_reg;
+        free(snum);
+    }
+}
+
+// DEREF, MINUS, AMPERSAND
+void RValueExpression6(char** stream, symbol_table_t** local_symtab, symbol_table_t** global_symtab) {
+
+    int save_reg = reg_stack;
+    char un_op = 0;
+    if (peek_token(stream) != '*' && peek_token(stream) != '-' && peek_token(stream) != '&') {
+
+        RValueExpression7(stream, local_symtab, global_symtab);
+        reg_stack = save_reg;
+        return;
+    }
+
+    un_op = next_token(stream);
+
+    reg_stack++;
+    RValueExpression6(stream, local_symtab, global_symtab);
+    int rg_a = reg_stack;
+    printf("$%d = %c$%d\n", save_reg, un_op, rg_a);
+    reg_stack = save_reg;
+}
+
+// MULDIV
+void RValueExpression5(char** stream, symbol_table_t** local_symtab, symbol_table_t** global_symtab) {
+
+    int save_reg = reg_stack;
+    RValueExpression6(stream, local_symtab, global_symtab);
+    int rg_a = reg_stack;
+
+    int op_mul = 0;
+    if (peek_token(stream) != '*' && peek_token(stream) != '/') {
+        reg_stack = save_reg;
+        return;
+    }
+
+    op_mul = next_token(stream);
+
+    reg_stack++;
+    RValueExpression5(stream, local_symtab, global_symtab);
+    int rg_b = reg_stack;
+    printf("$%d = $%d %c $%d\n", save_reg, rg_a, op_mul, rg_b);
+    reg_stack = save_reg;
+}
+
+// ADDSUB
+void RValueExpression4(char** stream, symbol_table_t** local_symtab, symbol_table_t** global_symtab) {
+
+    int save_reg = reg_stack;
+    RValueExpression5(stream, local_symtab, global_symtab);
+    int rg_a = reg_stack;
+
+    int op_add = 0;
+    if (peek_token(stream) != '+' && peek_token(stream) != '-') {
+        reg_stack = save_reg;
+        return;
+    }
+
+    op_add = next_token(stream);
+
+    reg_stack++;
+    RValueExpression4(stream, local_symtab, global_symtab);
+    int rg_b = reg_stack;
+
+    printf("$%d = $%d %c $%d\n", save_reg, rg_a, op_add, rg_b);
+    reg_stack = save_reg;
+}
+
+// GT/LT (EQ)
+void RValueExpression3(char** stream, symbol_table_t** local_symtab, symbol_table_t** global_symtab) {
+
+    int save_reg = reg_stack;
+    RValueExpression4(stream, local_symtab, global_symtab);
+    int rg_a = reg_stack;
+
+    int gt_lt;
+    int eq;
+    if (peek_token(stream) != '<' && peek_token(stream) != '>') {
+        reg_stack = save_reg;
+        return;
+    }
+
+    gt_lt = (next_token(stream) == '>');
+
+    if (peek_token(stream) != '=') {
+        eq = 0;
+    }
+    else {
+        eq = 1;
+        next_token(stream);
+    }
+
+    reg_stack++;
+    RValueExpression3(stream, local_symtab, global_symtab);
+    int rg_b = reg_stack;
+
+    char n[3];
+    n[0] = '<';
+
+    if (gt_lt) {
+        n[0] = '>';
+    }
+    n[1] = 0;
+    if (eq) {
+        n[1] = '=';
+        n[2] = 0;
+    }
+
+    printf("$%d = $%d %s $%d\n", save_reg, rg_a, n, rg_b);
+    reg_stack = save_reg;
+}
+
+// Eq | NEQ
+void RValueExpression2(char** stream, symbol_table_t** local_symtab, symbol_table_t** global_symtab) {
+
+    int save_reg = reg_stack;
+
+    RValueExpression3(stream, local_symtab, global_symtab);
+    int rg_a = reg_stack;
+
+    if (peek_token(stream) != '=' && peek_token(stream) != '!') {
+        reg_stack = save_reg;
+        return;
+    }
+
+    char neq = (next_token(stream));
+
+    if (peek_token(stream) != '=') {
+        reg_stack = save_reg;
+        return;
+    }
+    next_token(stream);
+
+    reg_stack++;
+    RValueExpression2(stream, local_symtab, global_symtab);
+    int rg_b = reg_stack;
+
+    printf("$%d = $%d %c= $%d\n", save_reg, rg_a, neq, rg_b);
+    reg_stack = save_reg;
+}
+
+// AND
+void RValueExpression1(char** stream, symbol_table_t** local_symtab, symbol_table_t** global_symtab) {
+
+    int save_reg = reg_stack;
+
+    RValueExpression2(stream, local_symtab, global_symtab);
+    int rg_a = reg_stack;
+
+    if (peek_token(stream) != '&') {
+        reg_stack = save_reg;
+        return;
+    }
+    next_token(stream);
+    if (peek_token(stream) != '&') {
+        reg_stack = save_reg;
+        return;
+    }
+    next_token(stream);
+
+    reg_stack++;
+    RValueExpression1(stream, local_symtab, global_symtab);
+    int rg_b = reg_stack;
+    printf("$%d = $%d && $%d\n", save_reg, rg_a, rg_b);
+    reg_stack = save_reg;
+}
+
+// OR
+void RValueExpression(char** stream, symbol_table_t** local_symtab, symbol_table_t** global_symtab) {
+    int save_reg = reg_stack;
+
+    RValueExpression1(stream, local_symtab, global_symtab);
+    int rg_a = reg_stack;
+
+    if (peek_token(stream) != '|') {
+        reg_stack = save_reg;
+        return;
+    }
+    next_token(stream);
+    if (peek_token(stream) != '|') {
+        reg_stack = save_reg;
+        return;
+    }
+    next_token(stream);
+
+    reg_stack++;
+    RValueExpression(stream, local_symtab, global_symtab);
+    int rg_b = reg_stack;
+    printf("$%d = $%d || $%d\n", save_reg, rg_a, rg_b);
+    reg_stack = save_reg;
+}
+
+static void LValuePrimary(char** stream, symbol_table_t** local_symtab, symbol_table_t** global_symtab) {
+    char name[32];
+
+    if (peek_token(stream) != TOKEN_IDENTIFIER) {
+        /** ERROR */
+        lval_result[0] = 0;
+        return;
+    }
+
+    next_token(stream);
+    copy_token_string(name, sizeof(name));
+    snprintf(lval_result, sizeof(lval_result), "%s", name);
+
+    while (peek_token(stream) == '[') {
+        next_token(stream);
+        reg_stack++;
+        RValueExpression(stream, local_symtab, global_symtab);
+        int rg_index = reg_stack;
+        if (peek_token(stream) != ']') {
+            /** ERROR */
+            reg_stack--;
+            return;
+        }
+        next_token(stream);
+        snprintf(lval_result, sizeof(lval_result), "%s[$%d]", name, rg_index);
+        reg_stack--;
+    }
+}
+
+void LValueExpression(char** stream, symbol_table_t** local_symtab, symbol_table_t** global_symtab) {
+    int save_reg = reg_stack;
+
+    if (peek_token(stream) != '*') {
+        LValuePrimary(stream, local_symtab, global_symtab);
+        reg_stack = save_reg;
+        return;
+    }
+
+    next_token(stream);
+    reg_stack++;
+    RValueExpression6(stream, local_symtab, global_symtab);
+    int rg_ptr = reg_stack;
+    snprintf(lval_result, sizeof(lval_result), "*$%d", rg_ptr);
+    reg_stack = save_reg;
+}
+
+void Expression(char** stream, symbol_table_t** local_symtab, symbol_table_t** global_symtab) {
+    char* save_stream = *stream;
+    int save_reg = reg_stack;
+    char lhs[32];
+
+    if (IsLValueStart(stream)) {
+        LValueExpression(stream, local_symtab, global_symtab);
+        if (peek_token(stream) == '=') {
+            snprintf(lhs, sizeof(lhs), "%s", lval_result);
+            next_token(stream);
+
+            reg_stack++;
+            Expression(stream, local_symtab, global_symtab);
+            int rg_rhs = reg_stack;
+            printf("%s = $%d\n", lhs, rg_rhs);
+            reg_stack = save_reg;
+            return;
+        }
+
+        *stream = save_stream;
+        reg_stack = save_reg;
+    }
+
+    RValueExpression(stream, local_symtab, global_symtab);
+    reg_stack = save_reg;
+}
+
+int main(int argc, char** argv) {
+    symbol_table_t* gt = NULL;
+    symbol_table_t* lt = NULL;
+    char* s = argv[1];
+
+    reg_stack++;
+    Expression(&s, &lt, &gt);
+}
