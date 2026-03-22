@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS= -O1 -Iinclude
+CFLAGS= -g -Iinclude
 
 SRCS := $(wildcard src/*.c)
 

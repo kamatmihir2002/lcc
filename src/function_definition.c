@@ -45,9 +45,9 @@ void FunctionDefinition(char** stream, symbol_table_t** local_symtab, symbol_tab
             printf("param %s size %d pointer_level %d array_length %d\n", params->symname, getSize(params->symtype), params->sym_ptrlevel, params->sym_lenarray);
             params = params->next;
         }
+        printf("param %s size %d pointer_level %d array_length %d\n", params->symname, getSize(params->symtype), params->sym_ptrlevel, params->sym_lenarray);
     }
     
-    printf("param %s size %d pointer_level %d array_length %d\n", params->symname, getSize(params->symtype), params->sym_ptrlevel, params->sym_lenarray);
     if (peek_token(stream) != ';') {
         StatementBlock(stream, local_symtab, global_symtab);
     }
