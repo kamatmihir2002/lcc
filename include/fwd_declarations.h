@@ -18,4 +18,4 @@ void IfStatement(char** stream, symbol_table_t** local_symtab, symbol_table_t** 
 void WhileStatement(char** stream, symbol_table_t** local_symtab, symbol_table_t** global_symtab) ;
 void Expression(char** stream, symbol_table_t** local_symtab, symbol_table_t** global_symtab);
 void LValueExpression(char** stream, symbol_table_t** local_symtab, symbol_table_t** global_symtab);
-void RValueExpression(char** stream, symbol_table_t** local_symtab, symbol_table_t** global_symtab);
+void RValueExpression(char** stream, symbol_table_t** local_symtab, symbol_table_t** global_symtab, int min_bp);
