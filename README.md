@@ -2,7 +2,7 @@
 
 This is a recovered copy of the source code of a C-subset compiler I worked on a couple years ago, cleaned up and tidied a bit. Outputs single pass SSA code with additional bookkeeping for function declarations.
 
-I had completed it before, but the final copy outputted pretty bad NASM code, with some very basic optimizations like dead code elimination for if-conditionals with pure constant statements. 
+I had completed it at the time somewhat, but the final copy outputted pretty bad NASM code, with some very basic optimizations like dead code elimination for if-conditionals with pure constant statements. This current copy is an incomplete one, which outputs SSA pseudocode instead of assembly, which I hope to complete again, and advance beyond.
 
 I plan on making this a modular multipass optimizing compiler that outputs fairly optimized nasm code. I plan on writing an `opt` module that handles propagations in multiple passes, along with dead code elimination and (maybe) loop unrolling. I also plan on writing a basic assembly emitter `toasm` to emit nasm code.
 
